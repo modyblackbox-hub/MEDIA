@@ -1,0 +1,3191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="artifact-type" content="dashboard">
+  <meta name="design-style" content="nocturne">
+  <title>YouTube Channel Archive — Interactive Screening Room</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@1.43.0/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      color-scheme: dark;
+
+      /* Page and surfaces: deep obsidian */
+      --background: #0d0d10;
+      --surface-container-low: #121216;
+      --surface-container: #18181e;
+      --surface-container-high: #22222a;
+
+      /* Text: luminous alabaster */
+      --on-surface: #f0ede6;
+      --on-surface-variant: #9e9b93;
+
+      /* Borders */
+      --outline: #383844;
+      --outline-variant: #25252e;
+
+      /* Accents: warm amber-gold */
+      --primary: #e5a93c;
+      --on-primary: #0d0d10;
+      --primary-container: #382b12;
+      --on-primary-container: #f7d996;
+      --secondary: #7c9cb0;
+      --tertiary: #5eb88a;
+      --error: #e06c6c;
+      --on-error: #1a0707;
+
+      /* Data series */
+      --data-1: #e5a93c;
+      --data-2: #7c9cb0;
+      --data-3: #5eb88a;
+      --data-4: #d97762;
+      --data-context: #474754;
+
+      /* Fonts */
+      --font-headline: 'Playfair Display', Georgia, serif;
+      --font-body: 'Plus Jakarta Sans', sans-serif;
+      --font-label: 'JetBrains Mono', monospace;
+
+      /* Shape */
+      --rounded: 0.375rem;
+      --rounded-lg: 0.625rem;
+      --rounded-full: 9999px;
+
+      /* Style effects */
+      --hairline: 1px solid var(--outline-variant);
+      --hairline-strong: 1px solid var(--outline);
+      --amber-glow: 0 0 0 1px color-mix(in srgb, var(--primary) 35%, transparent);
+      --amber-tint: color-mix(in srgb, var(--primary) 14%, transparent);
+      --steel-tint: color-mix(in srgb, var(--secondary) 16%, transparent);
+      --sage-tint: color-mix(in srgb, var(--tertiary) 14%, transparent);
+      --error-tint: color-mix(in srgb, var(--error) 14%, transparent);
+      --heading-tracking: -0.02em;
+      --label-tracking: 0.08em;
+
+      /* Shared tokens */
+      --positive: #5eb88a;
+      --warning: #e5a93c;
+      --focus: #e5a93c;
+
+      /* Dashboard / Data Explorer Type Scale */
+      --display-size: clamp(1.875rem, 1.45rem + 1.4vw, 2.5rem);
+      --headline-size: clamp(1.25rem, 1.1rem + 0.5vw, 1.5rem);
+      --subhead-size: clamp(1.0625rem, 1rem + 0.25vw, 1.1875rem);
+      --body-size: clamp(0.9375rem, 0.9rem + 0.15vw, 1rem);
+      --label-size: 0.75rem;
+
+      /* Spacing scale (4pt base) */
+      --space-xs: 0.25rem;
+      --space-sm: 0.5rem;
+      --space-md: 1rem;
+      --space-lg: 1.5rem;
+      --space-xl: 2.5rem;
+      --space-2xl: 4rem;
+      --space-3xl: 6rem;
+
+      /* Motion */
+      --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+      --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+      --dur-micro: 120ms;
+      --dur-short: 220ms;
+      --dur-long: 420ms;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body {
+      overflow-x: clip;
+      margin: 0;
+      padding: 0;
+      background: var(--background);
+      color: var(--on-surface);
+      font-family: var(--font-body);
+      font-size: var(--body-size);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+    header { position: static !important; }
+
+    button, input, select {
+      font-family: inherit;
+      color: inherit;
+    }
+
+    :focus-visible {
+      outline: 2px solid var(--focus);
+      outline-offset: 2px;
+    }
+
+    .page-grid {
+      display: grid;
+      gap: var(--space-lg);
+      padding: var(--space-lg);
+      max-width: 1320px;
+      margin: 0 auto;
+      overflow: hidden;
+    }
+    .page-grid * { min-width: 0; }
+
+    /* Header & KPI Strip */
+    .archive-header {
+      display: grid;
+      gap: var(--space-sm);
+      padding-bottom: var(--space-lg);
+      border-bottom: var(--hairline);
+    }
+    .archive-title {
+      margin: 0;
+      font-family: var(--font-headline);
+      font-weight: 600;
+      font-size: var(--display-size);
+      line-height: 1.1;
+      letter-spacing: var(--heading-tracking);
+      color: var(--on-surface);
+    }
+    .archive-lede {
+      margin: 0;
+      max-width: 65ch;
+      color: var(--on-surface-variant);
+      font-size: var(--body-size);
+      line-height: 1.6;
+    }
+
+    .kpi-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: var(--space-md);
+    }
+    .kpi-tile {
+      background: var(--surface-container);
+      border: var(--hairline);
+      border-radius: var(--rounded-lg);
+      padding: var(--space-md) var(--space-lg);
+      display: grid;
+      gap: var(--space-xs);
+    }
+    .kpi-label {
+      font-family: var(--font-label);
+      font-size: var(--label-size);
+      letter-spacing: var(--label-tracking);
+      text-transform: uppercase;
+      color: var(--on-surface-variant);
+    }
+    .kpi-value {
+      font-family: var(--font-headline);
+      font-weight: 600;
+      font-size: clamp(1.5rem, 1.25rem + 0.8vw, 2rem);
+      line-height: 1.1;
+      font-variant-numeric: tabular-nums;
+      color: var(--on-surface);
+    }
+    .kpi-sub {
+      font-family: var(--font-label);
+      font-size: var(--label-size);
+      color: var(--primary);
+    }
+
+    /* Screening Room Split */
+    .screening-room {
+      display: grid;
+      grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr);
+      gap: var(--space-lg);
+      align-items: start;
+    }
+
+    .panel {
+      background: var(--surface-container);
+      border: var(--hairline);
+      border-radius: var(--rounded-lg);
+      padding: var(--space-lg);
+    }
+
+    .player-stage {
+      display: grid;
+      gap: var(--space-md);
+    }
+
+    .player-frame-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: var(--background);
+      border: var(--hairline-strong);
+      border-radius: var(--rounded);
+      overflow: hidden;
+    }
+    .player-frame-wrap iframe {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: 0;
+      display: block;
+    }
+
+    .now-playing-head {
+      display: grid;
+      gap: var(--space-sm);
+    }
+    .now-playing-meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-sm);
+    }
+    .mono-tag {
+      font-family: var(--font-label);
+      font-size: var(--label-size);
+      letter-spacing: var(--label-tracking);
+      text-transform: uppercase;
+      padding: var(--space-xs) var(--space-sm);
+      border-radius: var(--rounded);
+      background: var(--surface-container-low);
+      border: var(--hairline);
+      color: var(--on-surface-variant);
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-xs);
+    }
+    .mono-tag.amber {
+      background: var(--primary-container);
+      color: var(--on-primary-container);
+      border-color: color-mix(in srgb, var(--primary) 40%, transparent);
+    }
+    .mono-tag.sage {
+      background: var(--sage-tint);
+      color: var(--tertiary);
+      border-color: color-mix(in srgb, var(--tertiary) 35%, transparent);
+    }
+
+    .now-playing-title {
+      margin: 0;
+      font-family: var(--font-headline);
+      font-weight: 600;
+      font-size: var(--headline-size);
+      line-height: 1.2;
+      letter-spacing: var(--heading-tracking);
+      color: var(--on-surface);
+    }
+    .now-playing-sub {
+      margin: 0;
+      color: var(--on-surface-variant);
+      font-size: var(--body-size);
+      max-width: 65ch;
+    }
+
+    .player-controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-sm);
+      padding-top: var(--space-sm);
+      border-top: var(--hairline);
+    }
+    .btn-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-sm);
+    }
+
+    .btn {
+      min-height: 44px;
+      padding: var(--space-sm) var(--space-md);
+      border-radius: var(--rounded);
+      border: var(--hairline-strong);
+      background: var(--surface-container-low);
+      color: var(--on-surface);
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-sm);
+      transition: background-color var(--dur-micro) var(--ease-out),
+                  box-shadow var(--dur-micro) var(--ease-out),
+                  color var(--dur-micro) var(--ease-out);
+    }
+    .btn:hover:not(:disabled) {
+      background: var(--surface-container-high);
+      box-shadow: var(--amber-glow);
+    }
+    .btn:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+    .btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: var(--on-primary);
+      border-color: var(--primary);
+    }
+    .btn-primary:hover:not(:disabled) {
+      background: var(--on-primary-container);
+      color: var(--on-primary);
+    }
+    .btn-active-state {
+      background: var(--primary-container);
+      color: var(--on-primary-container);
+      border-color: color-mix(in srgb, var(--primary) 50%, transparent);
+    }
+    .btn-watched-state {
+      background: var(--sage-tint);
+      color: var(--tertiary);
+      border-color: color-mix(in srgb, var(--tertiary) 45%, transparent);
+    }
+
+    .chapters-well {
+      background: var(--background);
+      border: var(--hairline);
+      border-radius: var(--rounded);
+      padding: var(--space-md);
+      display: grid;
+      gap: var(--space-sm);
+    }
+    .chapters-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: var(--space-sm);
+    }
+    .chapters-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-sm);
+    }
+    .chapter-chip {
+      min-height: 44px;
+      padding: var(--space-xs) var(--space-sm);
+      border-radius: var(--rounded);
+      border: var(--hairline);
+      background: var(--surface-container-low);
+      color: var(--on-surface);
+      font-size: 0.8125rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-sm);
+      transition: background-color var(--dur-micro) var(--ease-out),
+                  box-shadow var(--dur-micro) var(--ease-out);
+    }
+    .chapter-chip:hover {
+      background: var(--surface-container-high);
+      box-shadow: var(--amber-glow);
+    }
+    .chapter-chip.active {
+      background: var(--primary-container);
+      color: var(--on-primary-container);
+      box-shadow: var(--amber-glow);
+    }
+    .chapter-time {
+      font-family: var(--font-label);
+      font-size: var(--label-size);
+      color: var(--primary);
+    }
+
+    .embed-note {
+      margin: 0;
+      font-family: var(--font-label);
+      font-size: var(--label-size);
+      color: var(--on-surface-variant);
+      line-height: 1.5;
+    }
+
+    /* Queue Side Panel */
+    .queue-panel {
+      display: grid;
+      gap: var(--space-md);
+    }
+    .panel-head-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-sm);
+      padding-bottom: var(--space-sm);
+      border-bottom: var(--hairline);
+    }
+    .section-heading {
+      margin: 0;
+      font-family: var(--font-headline);
+      font-weight: 600;
+      font-size: var(--headline-size);
+      line-height: 1.15;
+      letter-spacing: var(--heading-tracking);
+      color: var(--on-surface);
+    }
+    .queue-tabs {
+      display: flex;
+      gap: var(--space-xs);
+      background: var(--background);
+      padding: var(--space-xs);
+      border-radius: var(--rounded);
+      border: var(--hairline);
+    }
+    .queue-tab {
+      min-height: 44px;
+      flex: 1 1 0;
+      padding: var(--space-xs) var(--space-sm);
+      border: 0;
+      border-radius: var(--rounded);
+      background: transparent;
+      color: var(--on-surface-variant);
+      font-family: var(--font-label);
+      font-size: var(--label-size);
+      letter-spacing: var(--label-tracking);
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background-color var(--dur-micro) var(--ease-out), color var(--dur-micro) var(--ease-out);
+    }
+    .queue-tab[aria-selected="true"] {
+      background: var(--surface-container-high);
+      color: var(--primary);
+    }
+
+    .queue-list {
+      display: grid;
+      gap: var(--space-sm);
+      max-height: 430px;
+      overflow-y: auto;
+      padding-right: var(--space-xs);
+    }
+    .queue-item {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      gap: var(--space-sm);
+      align-items: center;
+      padding: var(--space-sm);
+      background: var(--background);
+      border: var(--hairline);
+      border-radius: var(--rounded);
+      transition: background-color var(--dur-micro) var(--ease-out), box-shadow var(--dur-micro) var(--ease-out);
+    }
+    .queue-item.is-playing {
+      box-shadow: var(--amber-glow);
+      background: var(--surface-container-low);
+    }
+    .queue-play-btn {
+      min-width: 44px;
+      min-height: 44px;
+      border-radius: var(--rounded);
+      border: var(--hairline);
+      background: var(--surface-container);
+      color: var(--primary);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .queue-play-btn:hover {
+      background: var(--primary);
+      color: var(--on-primary);
+    }
+    .queue-item-info {
+      display: grid;
+      gap: 2px;
+      min-width: 0;
+    }
+    .queue-item-title {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--on-surface);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      cursor: pointer;
+      background: none;
+      border: 0;
+      padding: 0;
+      text-align: left;
+    }
+    .queue-item-title:hover {
+      color: var(--primary);
+    }
+    .queue-item-meta {
+      font-family: var(--font-label);
+      font-size: var(--label-size);
+      color: var(--on-surface-variant);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .queue-remove-btn {
+      min-width: 44px;
+      min-height: 44px;
+      border: 0;
+      border-radius: var(--rounded);
+      background: transparent;
+      color: var(--on-surface-variant);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .queue-remove-btn:hover {
+      background: var(--error-tint);
+      color: var(--error);
+    }
+
+    .empty-state {
+      background: var(--background);
+      border: var(--hairline);
+      border-radius: var(--rounded);
+      padding: var(--space-lg);
+      display: grid;
+      gap: var(--space-sm);
+      justify-items: start;
+    }
+    .empty-state-title {
+      margin: 0;
+      font-weight: 600;
+      color: var(--on-surface);
+    }
+    .empty-state-copy {
+      margin: 0;
+      color: var(--on-surface-variant);
+      font-size: 0.875rem;
+    }
+
+    /* Channel Directory Strip */
+    .channel-section {
+      display: grid;
+      gap: var(--space-md);
+    }
+    .section-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: var(--space-sm);
+    }
+    .channel-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr));
+      gap: var(--space-sm);
+    }
+    .channel-pill {
+      min-height: 44px;
+      text-align: left;
+      padding: var(--space-sm) var(--space-md);
+      background: var(--surface-container);
+      border: var(--hairline);
+      border-radius: var(--rounded);
+      cursor: pointer;
+      display: grid;
+      gap: 2px;
+      transition: background-color var(--dur-micro) var(--ease-out),
+                  box-shadow var(--dur-micro) var(--ease-out);
+    }
+    .channel-pill:hover {
+      background: var(--surface-container-high);
+    }
+    .channel-pill[aria-pressed="true"] {
+      background: var(--surface-container-high);
+      box-shadow: var(--amber-glow);
+    }
+    .channel-pill-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-xs);
+    }
+    .channel-pill-name {
+      font-weight: 600;
+      font-size: 0.9375rem;
+      color: var(--on-surface);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .channel-pill[aria-pressed="true"] .channel-pill-name {
+      color: var(--primary);
+    }
+    .channel-pill-count {
+      font-family: var(--font-label);
+      font-size: var(--label-size);
+      color: var(--on-surface-variant);
+      flex-shrink: 0;
+    }
+    .channel-pill-sub {
+      font-family: var(--font-label);
+      font-size: var(--label-size);
+      color: var(--on-surface-variant);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Filter Bar */
+    .filter-panel {
+      display: grid;
+      grid-template-columns: minmax(0, 1.8fr) repeat(3, minmax(0, 1fr)) auto;
+      gap: var(--space-md);
+      align-items: end;
+    }
+    .field-group {
+      display: grid;
+      gap: var(--space-xs);
+    }
+    .field-label {
+      font-family: var(--font-label);
+      font-size: var(--label-size);
+      letter-spacing: var(--label-tracking);
+      text-transform: uppercase;
+      color: var(--on-surface-variant);
+    }
+    .field-input, .field-select {
+      min-height: 44px;
+      width: 100%;
+      padding: var(--space-sm) var(--space-md);
+      background: var(--background);
+      border: var(--hairline-strong);
+      border-radius: var(--rounded);
+      color: var(--on-surface);
+      font-size: 0.9375rem;
+    }
+    .field-select {
+      padding-right: var(--space-xl);
+      cursor: pointer;
+    }
+    .field-input:focus, .field-select:focus {
+      box-shadow: var(--amber-glow);
+    }
+
+    /* Video Catalog Grid */
+    .catalog-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(295px, 100%), 1fr));
+      gap: var(--space-lg);
+    }
+    .video-card-wrapper {
+      container-type: inline-size;
+    }
+    .video-card {
+      height: 100%;
+      background: var(--surface-container);
+      border: var(--hairline);
+      border-radius: var(--rounded-lg);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: background-color var(--dur-short) var(--ease-out),
+                  box-shadow var(--dur-short) var(--ease-out);
+    }
+    .video-card:hover {
+      background: var(--surface-container-high);
+    }
+    .video-card.is-playing {
+      box-shadow: var(--amber-glow);
+    }
+
+    .poster-btn {
+      position: relative;
+      display: block;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      padding: 0;
+      border: 0;
+      border-bottom: var(--hairline);
+      background: var(--background);
+      cursor: pointer;
+      overflow: hidden;
+      text-align: left;
+    }
+    .poster-art {
+      position: absolute;
+      inset: 0;
+      padding: var(--space-md);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background: linear-gradient(145deg, var(--surface-container-low) 0%, var(--background) 100%);
+    }
+    .poster-accent-line {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--secondary);
+    }
+    .poster-accent-line.tone-amber { background: var(--primary); }
+    .poster-accent-line.tone-sage { background: var(--tertiary); }
+    .poster-accent-line.tone-coral { background: var(--data-4); }
+
+    .poster-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: var(--space-sm);
+      z-index: 1;
+    }
+    .poster-channel-code {
+      font-family: var(--font-label);
+      font-size: var(--label-size);
+      letter-spacing: var(--label-tracking);
+      text-transform: uppercase;
+      color: var(--on-surface-variant);
+    }
+    .poster-badges {
+      display: inline-flex;
+      gap: var(--space-xs);
+    }
+    .poster-center {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+      z-index: 1;
+    }
+    .poster-play-disc {
+      width: 48px;
+      height: 48px;
+      border-radius: var(--rounded-full);
+      background: var(--surface-container);
+      border: var(--hairline-strong);
+      color: var(--primary);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: transform var(--dur-micro) var(--ease-out),
+                  background-color var(--dur-micro) var(--ease-out),
+                  color var(--dur-micro) var(--ease-out);
+    }
+    .poster-btn:hover .poster-play-disc,
+    .poster-btn:focus-visible .poster-play-disc,
+    .video-card.is-playing .poster-play-disc {
+      background: var(--primary);
+      color: var(--on-primary);
+      transform: scale(1.06);
+    }
+    .poster-series {
+      font-family: var(--font-headline);
+      font-size: 1.05rem;
+      font-weight: 500;
+      color: var(--on-surface);
+      line-height: 1.25;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .poster-bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 1;
+    }
+    .poster-views {
+      font-family: var(--font-label);
+      font-size: var(--label-size);
+      color: var(--on-surface-variant);
+    }
+    .poster-duration {
+      font-family: var(--font-label);
+      font-size: var(--label-size);
+      padding: 2px var(--space-sm);
+      border-radius: var(--rounded);
+      background: var(--surface-container);
+      border: var(--hairline);
+      color: var(--on-surface);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .card-body {
+      padding: var(--space-md);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-sm);
+      flex: 1 1 auto;
+    }
+    .card-meta-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-sm);
+      font-family: var(--font-label);
+      font-size: var(--label-size);
+      color: var(--on-surface-variant);
+    }
+    .card-title-btn {
+      background: none;
+      border: 0;
+      padding: 0;
+      margin: 0;
+      text-align: left;
+      cursor: pointer;
+      color: var(--on-surface);
+      font-size: var(--subhead-size);
+      font-weight: 600;
+      line-height: 1.3;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .card-title-btn:hover {
+      color: var(--primary);
+    }
+    .card-actions {
+      margin-top: auto;
+      padding-top: var(--space-sm);
+      border-top: var(--hairline);
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-sm);
+    }
+    .card-actions .btn {
+      flex: 1 1 auto;
+      padding: var(--space-xs) var(--space-sm);
+      font-size: 0.8125rem;
+    }
+
+    /* Channel Analytics Section */
+    .analytics-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+      gap: var(--space-lg);
+      align-items: stretch;
+    }
+    .chart-wrap {
+      position: relative;
+      min-height: 300px;
+      height: 320px;
+      width: 100%;
+    }
+
+    .channel-table-wrap {
+      overflow-x: auto;
+    }
+    .archive-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+    .archive-table th {
+      font-family: var(--font-label);
+      font-size: var(--label-size);
+      letter-spacing: var(--label-tracking);
+      text-transform: uppercase;
+      color: var(--on-surface-variant);
+      text-align: left;
+      padding: var(--space-sm) var(--space-sm);
+      border-bottom: var(--hairline-strong);
+      font-weight: 500;
+    }
+    .archive-table th.num,
+    .archive-table td.num {
+      text-align: right;
+      font-family: var(--font-label);
+      font-variant-numeric: tabular-nums;
+    }
+    .archive-table td {
+      padding: var(--space-sm) var(--space-sm);
+      border-bottom: var(--hairline);
+      color: var(--on-surface);
+    }
+    .archive-table tr.clickable-row {
+      cursor: pointer;
+    }
+    .archive-table tr.clickable-row:hover td {
+      background: var(--surface-container-high);
+    }
+
+    .archive-footer {
+      padding-top: var(--space-md);
+      border-top: var(--hairline);
+      color: var(--on-surface-variant);
+      font-size: 0.875rem;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: var(--space-sm);
+    }
+
+    @media (max-width: 980px) {
+      .screening-room,
+      .analytics-grid {
+        grid-template-columns: 1fr;
+      }
+      .filter-panel {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .kpi-strip {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 640px) {
+      .page-grid {
+        padding: var(--space-md);
+        gap: var(--space-md);
+      }
+      .kpi-strip,
+      .filter-panel {
+        grid-template-columns: 1fr;
+      }
+      .panel {
+        padding: var(--space-md);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page-grid">
+    <header class="archive-header">
+      <h1 class="archive-title">YouTube Channel Archive</h1>
+      <p class="archive-lede">
+        Explore and watch 77 indexed videos, full-length podcast episodes, builds, travel documentaries, and Shorts from the 10 channels in the notebook archive.
+      </p>
+    </header>
+
+    <section class="kpi-strip" aria-label="Archive summary metrics">
+      <div class="kpi-tile">
+        <span class="kpi-label">Indexed Channels</span>
+        <span class="kpi-value" id="kpi-channels">10</span>
+        <span class="kpi-sub">9 with subscriber counts</span>
+      </div>
+      <div class="kpi-tile">
+        <span class="kpi-label">Catalog Videos</span>
+        <span class="kpi-value" id="kpi-total-videos">77</span>
+        <span class="kpi-sub">Full uploads, clips &amp; Shorts</span>
+      </div>
+      <div class="kpi-tile">
+        <span class="kpi-label">Matching Selection</span>
+        <span class="kpi-value" id="kpi-filtered">77</span>
+        <span class="kpi-sub" id="kpi-filter-note">All channels &amp; formats</span>
+      </div>
+      <div class="kpi-tile">
+        <span class="kpi-label">Screening Queue</span>
+        <span class="kpi-value" id="kpi-queue">0</span>
+        <span class="kpi-sub" id="kpi-watched-note">0 marked watched</span>
+      </div>
+    </section>
+
+    <section class="screening-room" id="screening-room" aria-label="Integrated video player and queue">
+      <div class="panel player-stage">
+        <div class="player-frame-wrap">
+          <iframe
+            id="yt-player"
+            title="YouTube video player"
+            src="https://www.youtube.com/embed/jG7dSXcfVqE?rel=0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen>
+          </iframe>
+        </div>
+
+        <div class="now-playing-head">
+          <div class="now-playing-meta-row" id="now-playing-badges"></div>
+          <h2 class="now-playing-title" id="now-playing-title">DO WHAT YOU CAN'T</h2>
+          <p class="now-playing-sub" id="now-playing-sub"></p>
+        </div>
+
+        <div class="chapters-well" id="chapters-well" hidden>
+          <div class="chapters-header">
+            <span class="kpi-label">Jump to Source Timestamp</span>
+            <span class="kpi-label" id="active-chapter-label">0:00</span>
+          </div>
+          <div class="chapters-list" id="chapters-list"></div>
+        </div>
+
+        <div class="player-controls-row">
+          <div class="btn-group">
+            <button type="button" class="btn" id="btn-prev-queue" onclick="playRelativeInQueue(-1)">
+              <i data-lucide="skip-back" aria-hidden="true"></i>
+              <span>Prev in Queue</span>
+            </button>
+            <button type="button" class="btn btn-primary" id="btn-next-queue" onclick="playRelativeInQueue(1)">
+              <span>Next in Queue</span>
+              <i data-lucide="skip-forward" aria-hidden="true"></i>
+            </button>
+          </div>
+          <div class="btn-group">
+            <button type="button" class="btn" id="btn-player-queue" onclick="toggleQueueActive()">
+              <i data-lucide="list-plus" aria-hidden="true"></i>
+              <span>Add to Queue</span>
+            </button>
+            <button type="button" class="btn" id="btn-player-watched" onclick="toggleWatchedActive()">
+              <i data-lucide="check-circle-2" aria-hidden="true"></i>
+              <span>Mark Watched</span>
+            </button>
+          </div>
+        </div>
+
+        <p class="embed-note" id="embed-note">
+          Playing embedded YouTube ID <span id="active-video-id">jG7dSXcfVqE</span> directly inside the screening room.
+        </p>
+      </div>
+
+      <aside class="panel queue-panel" aria-label="Screening queue and watch log">
+        <div class="panel-head-row">
+          <h2 class="section-heading">Up Next &amp; History</h2>
+          <button type="button" class="btn" onclick="queueTopFiltered()">
+            <i data-lucide="plus" aria-hidden="true"></i>
+            <span>Queue Top 5</span>
+          </button>
+        </div>
+
+        <div class="queue-tabs" role="tablist" aria-label="Queue views">
+          <button type="button" role="tab" class="queue-tab" id="tab-queue" aria-selected="true" onclick="setSideTab('queue')">
+            Queue (<span id="tab-queue-count">0</span>)
+          </button>
+          <button type="button" role="tab" class="queue-tab" id="tab-watched" aria-selected="false" onclick="setSideTab('watched')">
+            Watched (<span id="tab-watched-count">0</span>)
+          </button>
+        </div>
+
+        <div id="side-list-container"></div>
+      </aside>
+    </section>
+
+    <section class="channel-section" aria-label="Channel filter directory">
+      <div class="section-bar">
+        <h2 class="section-heading">Browse by Channel</h2>
+        <span class="kpi-label" id="channel-summary-label">Showing all 10 channels</span>
+      </div>
+      <div class="channel-grid" id="channel-grid"></div>
+    </section>
+
+    <section class="panel" aria-label="Search and filter controls">
+      <div class="filter-panel">
+        <div class="field-group">
+          <label class="field-label" for="search-input">Search titles, guests, or playlists</label>
+          <input class="field-input" id="search-input" type="search" placeholder="e.g., Lamborghini, Antarctica, Trump, NYPD" oninput="handleFilterChange()">
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="format-select">Format</label>
+          <select class="field-select" id="format-select" onchange="handleFilterChange()">
+            <option value="all">All Formats</option>
+            <option value="video">Videos &amp; Episodes</option>
+            <option value="short">Shorts</option>
+            <option value="clip">Clips &amp; Music</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="playlist-select">Playlist / Shelf</label>
+          <select class="field-select" id="playlist-select" onchange="handleFilterChange()">
+            <option value="all">All Playlists</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="sort-select">Sort order</label>
+          <select class="field-select" id="sort-select" onchange="handleFilterChange()">
+            <option value="views-desc">Most Viewed</option>
+            <option value="duration-desc">Longest First</option>
+            <option value="duration-asc">Shortest First</option>
+            <option value="archive">Archive Order</option>
+          </select>
+        </div>
+        <button type="button" class="btn" onclick="resetAllFilters()">Reset Filters</button>
+      </div>
+    </section>
+
+    <section aria-label="Video catalog">
+      <div class="section-bar" style="margin-bottom: var(--space-md);">
+        <h2 class="section-heading" id="catalog-heading">Video Catalog</h2>
+        <span class="kpi-label" id="catalog-count-label">77 videos shown</span>
+      </div>
+      <div class="catalog-grid" id="catalog-grid"></div>
+    </section>
+
+    <section class="analytics-grid" aria-label="Channel scale comparison">
+      <div class="panel">
+        <div class="panel-head-row" style="margin-bottom: var(--space-md);">
+          <div>
+            <h2 class="section-heading">Channel Reach vs. Indexed Top Views</h2>
+            <span class="kpi-label">Subscribers (M) and top indexed video views (M) from archive excerpts</span>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="channel-chart" aria-label="Bar chart comparing channel subscribers and top indexed video views"></canvas>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head-row" style="margin-bottom: var(--space-md);">
+          <h2 class="section-heading">Channel Directory</h2>
+          <span class="kpi-label">Click row to filter</span>
+        </div>
+        <div class="channel-table-wrap">
+          <table class="archive-table">
+            <thead>
+              <tr>
+                <th>Channel</th>
+                <th class="num">Subs</th>
+                <th class="num">Total</th>
+                <th class="num">Indexed</th>
+              </tr>
+            </thead>
+            <tbody id="channel-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <footer class="archive-footer">
+      <span>Sources: Excerpts from CaseyNeistat, EmeliaHartford, FLAGRANT, IMPAULSIVE, Jake Paul, JerryRigEverything, Kara and Nate, Logan Paul, Mike Majlak Vlogs, and Philip DeFranco YouTube channel pages.</span>
+      <span>Playback powered by YouTube embedded player.</span>
+    </footer>
+  </main>
+
+  <api-shim></api-shim>
+  <script>
+    const CHANNELS = [
+      {
+        id: `casey`,
+        name: `CaseyNeistat`,
+        handle: `@casey`,
+        subs: `12.7M`,
+        subsNum: 12.7,
+        totalVideos: `1.1K`,
+        tagline: `new york city`,
+        accent: `amber`
+      },
+      {
+        id: `emelia`,
+        name: `EmeliaHartford`,
+        handle: `@EmeliaHartford`,
+        subs: `2.13M`,
+        subsNum: 2.13,
+        totalVideos: `799`,
+        tagline: `ECREW builds, Lamborghinis & vintage NASCAR`,
+        accent: `coral`
+      },
+      {
+        id: `flagrant`,
+        name: `FLAGRANT`,
+        handle: `@OfficialFlagrant`,
+        subs: `2.01M`,
+        subsNum: 2.01,
+        totalVideos: `696`,
+        tagline: `THE GREATEST HANG IN THE UNIVERSE!`,
+        accent: `amber`
+      },
+      {
+        id: `impaulsive`,
+        name: `IMPAULSIVE`,
+        handle: `@Impaulsive`,
+        subs: `4.82M`,
+        subsNum: 4.82,
+        totalVideos: `900`,
+        tagline: `Podcast interviews, debates & pop culture`,
+        accent: `steel`
+      },
+      {
+        id: `jakepaul`,
+        name: `Jake Paul`,
+        handle: `@jakepaul`,
+        subs: `—`,
+        subsNum: 0,
+        totalVideos: `—`,
+        tagline: `Ranch tours, stunts & Team 10 archive`,
+        accent: `coral`
+      },
+      {
+        id: `jerryrig`,
+        name: `JerryRigEverything`,
+        handle: `@JerryRigEverything`,
+        subs: `10.4M`,
+        subsNum: 10.4,
+        totalVideos: `1.6K`,
+        tagline: `I review technology from the inside.`,
+        accent: `sage`
+      },
+      {
+        id: `karanate`,
+        name: `Kara and Nate`,
+        handle: `@KaraandNate`,
+        subs: `4.55M`,
+        subsNum: 4.55,
+        totalVideos: `1K`,
+        tagline: `Husband and wife from Nashville traveling to 100 countries`,
+        accent: `sage`
+      },
+      {
+        id: `loganpaul`,
+        name: `Logan Paul`,
+        handle: `@loganpaulvlogs`,
+        subs: `23.6M`,
+        subsNum: 23.6,
+        totalVideos: `814`,
+        tagline: `31 year old in Puerto Rico living life to the fullest`,
+        accent: `amber`
+      },
+      {
+        id: `mikemajlak`,
+        name: `Mike Majlak Vlogs`,
+        handle: `@MikeMajlakVlogs`,
+        subs: `2.72M`,
+        subsNum: 2.72,
+        totalVideos: `372`,
+        tagline: `The Night Shift vlogs & Hollywood ventures`,
+        accent: `steel`
+      },
+      {
+        id: `defranco`,
+        name: `Philip DeFranco`,
+        handle: `@PhilipDeFranco`,
+        subs: `6.66M`,
+        subsNum: 6.66,
+        totalVideos: `2.6K`,
+        tagline: `New Daily Videos Every Single Day Except Saturday!`,
+        accent: `steel`
+      }
+    ];
+
+    const VIDEOS = [
+      // CaseyNeistat
+      {
+        id: `jG7dSXcfVqE`,
+        channelId: `casey`,
+        title: `DO WHAT YOU CAN'T`,
+        duration: `3:53`,
+        durationSec: 233,
+        views: `16.78M`,
+        viewsNum: 16777469,
+        age: `9y ago`,
+        format: `video`,
+        playlist: `Best of Casey Neistat`,
+        cc: false,
+        note: `Featured channel trailer & creator collaboration with Max Joseph; music 'Carte Postale' by Sløve.`
+      },
+      {
+        id: `WxfZkMm3wcg`,
+        channelId: `casey`,
+        title: `Make It Count`,
+        duration: `4:38`,
+        durationSec: 278,
+        views: `33M`,
+        viewsNum: 33000000,
+        age: `14y ago`,
+        format: `video`,
+        playlist: `Adventure Movies`,
+        cc: false,
+        note: `Also featured in Best of Casey Neistat.`
+      },
+      {
+        id: `bzE-IMaegzQ`,
+        channelId: `casey`,
+        title: `Bike Lanes by Casey Neistat`,
+        duration: `3:04`,
+        durationSec: 184,
+        views: `30M`,
+        viewsNum: 30000000,
+        age: `15y ago`,
+        format: `video`,
+        playlist: `Best of Casey Neistat`,
+        cc: false,
+        note: `Classic NYC bike lane film.`
+      },
+      {
+        id: `qRv7G7WpOoU`,
+        channelId: `casey`,
+        title: `SNOWBOARDING WITH THE NYPD`,
+        duration: `2:42`,
+        durationSec: 162,
+        views: `23M`,
+        viewsNum: 23000000,
+        age: `10y ago`,
+        format: `video`,
+        playlist: `Best of Casey Neistat`,
+        cc: false,
+        note: `Snowboarding through New York City streets.`
+      },
+      {
+        id: `3-Mg75awALA`,
+        channelId: `casey`,
+        title: `the surprise in South Africa by Casey Neistat`,
+        duration: `6:39`,
+        durationSec: 399,
+        views: `10M`,
+        viewsNum: 10000000,
+        age: `14y ago`,
+        format: `video`,
+        playlist: `Adventure Movies`,
+        cc: false,
+        note: `Also in Best of Casey Neistat.`
+      },
+      {
+        id: `MMF9I_9DAcs`,
+        channelId: `casey`,
+        title: `How to Turn Your Apple Watch Gold`,
+        duration: `2:49`,
+        durationSec: 169,
+        views: `9.6M`,
+        viewsNum: 9600000,
+        age: `11y ago`,
+        format: `video`,
+        playlist: `Making Stuff`,
+        cc: false,
+        note: `Studio DIY hardware mod.`
+      },
+      {
+        id: `jU7rhVub0rU`,
+        channelId: `casey`,
+        title: `what would you do with $25,000?`,
+        duration: `6:45`,
+        durationSec: 405,
+        views: `7.8M`,
+        viewsNum: 7800000,
+        age: `12y ago`,
+        format: `video`,
+        playlist: `Best of Casey Neistat`,
+        cc: true,
+        note: `Closed captions available.`
+      },
+      {
+        id: `q2h9ISla-fQ`,
+        channelId: `casey`,
+        title: `The Devil's Pool`,
+        duration: `4:18`,
+        durationSec: 258,
+        views: `6M`,
+        viewsNum: 6000000,
+        age: `13y ago`,
+        format: `video`,
+        playlist: `Adventure Movies`,
+        cc: false,
+        note: `Travel adventure film.`
+      },
+      {
+        id: `gnHCw87Enq4`,
+        channelId: `casey`,
+        title: `MY FIRST VLOG`,
+        duration: `5:58`,
+        durationSec: 358,
+        views: `5.6M`,
+        viewsNum: 5600000,
+        age: `11y ago`,
+        format: `video`,
+        playlist: `Vlog`,
+        cc: false,
+        note: `Opening installment of the daily vlog playlist.`
+      },
+      {
+        id: `TjxzFkRQzC0`,
+        channelId: `casey`,
+        title: `Blow Torch Customized Google Glass`,
+        duration: `3:14`,
+        durationSec: 194,
+        views: `5.1M`,
+        viewsNum: 5100000,
+        age: `11y ago`,
+        format: `video`,
+        playlist: `Making Stuff`,
+        cc: false,
+        note: `Making Stuff workshop series.`
+      },
+      {
+        id: `B-46uG6raX4`,
+        channelId: `casey`,
+        title: `New York City's Hottest Day in 14 Years`,
+        duration: `9:33`,
+        durationSec: 573,
+        views: `2.4M`,
+        viewsNum: 2400000,
+        age: `4mo ago`,
+        format: `video`,
+        playlist: `Recent Uploads`,
+        cc: false,
+        note: `Recent NYC upload.`
+      },
+      {
+        id: `EzksAB7oVxY`,
+        channelId: `casey`,
+        title: `Saying NO to Mr. Beast`,
+        duration: `14:32`,
+        durationSec: 872,
+        views: `1.5M`,
+        viewsNum: 1500000,
+        age: `4w ago`,
+        format: `video`,
+        playlist: `Recent Uploads`,
+        cc: false,
+        note: `Recent upload.`
+      },
+      {
+        id: `gB156bGX_5Y`,
+        channelId: `casey`,
+        title: `Halloween in NYC. Marathon in the Morning.`,
+        duration: `9:07`,
+        durationSec: 547,
+        views: `1.2M`,
+        viewsNum: 1200000,
+        age: `2w ago`,
+        format: `video`,
+        playlist: `Recent Uploads`,
+        cc: false,
+        note: `Latest upload in archive excerpt.`
+      },
+      {
+        id: `o0xoWsYXIrY`,
+        channelId: `casey`,
+        title: `it's toxic.`,
+        duration: `Short`,
+        durationSec: 45,
+        views: `15M`,
+        viewsNum: 15000000,
+        age: `Short`,
+        format: `short`,
+        playlist: `Shorts`,
+        cc: false,
+        note: `YouTube Short from CaseyNeistat.`
+      },
+      {
+        id: `NeE8pPCW4cg`,
+        channelId: `casey`,
+        title: `just like marty mcfly`,
+        duration: `Short`,
+        durationSec: 45,
+        views: `2.5M`,
+        viewsNum: 2500000,
+        age: `Short`,
+        format: `short`,
+        playlist: `Shorts`,
+        cc: false,
+        note: `YouTube Short from CaseyNeistat.`
+      },
+
+      // EmeliaHartford
+      {
+        id: `0hcs4Y1tqic`,
+        channelId: `emelia`,
+        title: `Goodyear Corporate asked to see my ABANDONED Superbird NASCAR...`,
+        duration: `30:19`,
+        durationSec: 1819,
+        views: `3.49M`,
+        viewsNum: 3489504,
+        age: `1y ago`,
+        format: `video`,
+        playlist: `Popular Videos`,
+        cc: false,
+        note: `Featured channel video highlighting the abandoned Superbird NASCAR build.`
+      },
+      {
+        id: `EbPrwNxn7EM`,
+        channelId: `emelia`,
+        title: `WE WENT OFF-ROAD DRIFTING!!`,
+        duration: `12:07`,
+        durationSec: 727,
+        views: `14M`,
+        viewsNum: 14000000,
+        age: `9y ago`,
+        format: `video`,
+        playlist: `Popular Videos`,
+        cc: false,
+        note: `Most-viewed video in EmeliaHartford archive.`
+      },
+      {
+        id: `MNNsstDHg8s`,
+        channelId: `emelia`,
+        title: `Building an LS SWAPPED 240SX IN 10 MINUTES! Amazing Transformation`,
+        duration: `13:01`,
+        durationSec: 781,
+        views: `4.1M`,
+        viewsNum: 4100000,
+        age: `7y ago`,
+        format: `video`,
+        playlist: `Popular Videos`,
+        cc: false,
+        note: `LS-swapped 240SX transformation.`
+      },
+      {
+        id: `ihHDqmSQa0M`,
+        channelId: `emelia`,
+        title: `Trading My Abandoned Big Block Drag Boat for Cleetus's Mini Jet Boat... (ends horrible)`,
+        duration: `32:18`,
+        durationSec: 1938,
+        views: `2.3M`,
+        viewsNum: 2300000,
+        age: `1y ago`,
+        format: `video`,
+        playlist: `Popular Videos`,
+        cc: false,
+        note: `Boat swap with Cleetus.`
+      },
+      {
+        id: `36o1PbPv3aM`,
+        channelId: `emelia`,
+        title: `CHEAP CAR CHALLENGE! Who Bought The Best Car Under $5,000?`,
+        duration: `1:23:23`,
+        durationSec: 5003,
+        views: `2.2M`,
+        viewsNum: 2200000,
+        age: `7mo ago`,
+        format: `video`,
+        playlist: `Popular Videos`,
+        cc: false,
+        note: `Feature-length under-$5,000 car challenge.`
+      },
+      {
+        id: `muAdCIId82w`,
+        channelId: `emelia`,
+        title: `I bought an Abandoned Twin Turbo Lamborghini for Cheap w one huge issue...`,
+        duration: `36:21`,
+        durationSec: 2181,
+        views: `1.9M`,
+        viewsNum: 1900000,
+        age: `2mo ago`,
+        format: `video`,
+        playlist: `Recent Uploads`,
+        cc: false,
+        note: `Part 1 of the twin-turbo Gallardo rescue.`
+      },
+      {
+        id: `E4j6-MUHgfI`,
+        channelId: `emelia`,
+        title: `I Bought a Wrecked AUDI RS6 & Rebuilt it in 24 HOURS`,
+        duration: `43:50`,
+        durationSec: 2630,
+        views: `1.5M`,
+        viewsNum: 1500000,
+        age: `1mo ago`,
+        format: `video`,
+        playlist: `Recent Uploads`,
+        cc: false,
+        note: `24-hour Audi RS6 rebuild.`
+      },
+      {
+        id: `7R1W4mZgEAc`,
+        channelId: `emelia`,
+        title: `I bought the cheapest Lamborghini in the country… now we know why`,
+        duration: `39:11`,
+        durationSec: 2351,
+        views: `1.5M`,
+        viewsNum: 1500000,
+        age: `1mo ago`,
+        format: `video`,
+        playlist: `Recent Uploads`,
+        cc: false,
+        note: `Recent Lamborghini teardown.`
+      },
+      {
+        id: `mFB3dTKhujo`,
+        channelId: `emelia`,
+        title: `I Found a REAL 2,000HP Championship Cigarette Boat on Craigslist and made an offer...`,
+        duration: `27:19`,
+        durationSec: 1639,
+        views: `1.2M`,
+        viewsNum: 1200000,
+        age: `10d ago`,
+        format: `video`,
+        playlist: `Recent Uploads`,
+        cc: false,
+        note: `Latest upload in EmeliaHartford excerpt.`
+      },
+      {
+        id: `QPN7kgZU_iw`,
+        channelId: `emelia`,
+        title: `Just a girl and her vintage NASCAR`,
+        duration: `Short`,
+        durationSec: 45,
+        views: `680K`,
+        viewsNum: 680000,
+        age: `Short`,
+        format: `short`,
+        playlist: `Shorts`,
+        cc: false,
+        note: `Vintage NASCAR Short.`
+      },
+
+      // FLAGRANT
+      {
+        id: `_891SdAWZpQ`,
+        channelId: `flagrant`,
+        title: `Joe Rogan Gets HIGH & Flagrant`,
+        duration: `3:23:35`,
+        durationSec: 12215,
+        views: `44M`,
+        viewsNum: 44000000,
+        age: `4y ago`,
+        format: `video`,
+        playlist: `Popular Videos`,
+        cc: false,
+        note: `Top-viewed Flagrant full episode.`
+      },
+      {
+        id: `WGrk7Mzm4uo`,
+        channelId: `flagrant`,
+        title: `MrBeast Gets Flagrant and Walked Away from $1 BILLION DOLLARS`,
+        duration: `3:44:30`,
+        durationSec: 13470,
+        views: `23M`,
+        viewsNum: 23000000,
+        age: `4y ago`,
+        format: `video`,
+        playlist: `Popular Videos`,
+        cc: false,
+        note: `Long-form interview with MrBeast.`
+      },
+      {
+        id: `Ry1IjOft95c`,
+        channelId: `flagrant`,
+        title: `Trump On Who Really Tried to Kill Him, Abortion & More`,
+        duration: `1:28:18`,
+        durationSec: 5298,
+        views: `9.7M`,
+        viewsNum: 9700000,
+        age: `2y ago`,
+        format: `video`,
+        playlist: `Popular Videos`,
+        cc: false,
+        note: `Donald Trump appearance on Flagrant.`
+      },
+      {
+        id: `_-KASW3lX5w`,
+        channelId: `flagrant`,
+        title: `Shane Gillis on Wrestling Joe Rogan, Stylebender Loss, & Why Napoleon is The GOAT`,
+        duration: `3:06:27`,
+        durationSec: 11187,
+        views: `9M`,
+        viewsNum: 9000000,
+        age: `3y ago`,
+        format: `video`,
+        playlist: `Popular Videos`,
+        cc: false,
+        note: `Shane Gillis episode.`
+      },
+      {
+        id: `2v99_8xJoqA`,
+        channelId: `flagrant`,
+        title: `50 Cent on Diddy's Life In Prison, Eminem, & Street Fighter Reaction`,
+        duration: `1:56:54`,
+        durationSec: 7014,
+        views: `3.7M`,
+        viewsNum: 3700000,
+        age: `1mo ago`,
+        format: `video`,
+        playlist: `Flagrant Full Episodes`,
+        cc: false,
+        note: `50 Cent sits down with the Flagrant crew.`
+      },
+      {
+        id: `iGBG__XrmT4`,
+        channelId: `flagrant`,
+        title: `Which Ethnicity Makes the Best Baby Mama? | Chad “OchoCinco” Johnson`,
+        duration: `2:11:55`,
+        durationSec: 7915,
+        views: `628K`,
+        viewsNum: 628000,
+        age: `3w ago`,
+        format: `video`,
+        playlist: `Flagrant Full Episodes`,
+        cc: false,
+        note: `Featured channel episode with Chad "Ochocinco" Johnson discussing Maradona, saving 81% of his money, Cristiano Ronaldo, and Tom Brady.`,
+        chapters: [
+          { time: `0:00`, sec: 0, label: `Soccer is the GREATEST sport` },
+          { time: `27:09`, sec: 1629, label: `Frugal, Women HUNTING + Free Daejon!` },
+          { time: `55:19`, sec: 3319, label: `Ocho getting MARRIED + Ankles` },
+          { time: `1:20:52`, sec: 4852, label: `Dumb big purchases, Saving 81% + Marshawn Lynch` },
+          { time: `1:45:13`, sec: 6313, label: `Ocho's Soccer show + Ronaldo is the GOAT` },
+          { time: `2:01:26`, sec: 7286, label: `Ocho doesn't miss the game + Hall of Fame` }
+        ]
+      },
+      {
+        id: `IqGaxQ7yuqg`,
+        channelId: `flagrant`,
+        title: `What Hasidic Jews, Amish & Native Americans Know That We Don't | Peter Santenello`,
+        duration: `3:02:42`,
+        durationSec: 10962,
+        views: `582K`,
+        viewsNum: 582000,
+        age: `6d ago`,
+        format: `video`,
+        playlist: `Flagrant Full Episodes`,
+        cc: false,
+        note: `Collaboration with Peter Santenello.`
+      },
+      {
+        id: `FghQewMEKSI`,
+        channelId: `flagrant`,
+        title: `Gotham x Schulz x Magnus`,
+        duration: `0:30`,
+        durationSec: 30,
+        views: `9.4M`,
+        viewsNum: 9400000,
+        age: `4mo ago`,
+        format: `clip`,
+        playlist: `Collaborations`,
+        cc: false,
+        note: `Collaboration with GothamChess and Magnus Carlsen.`
+      },
+      {
+        id: `UhFpvCnhnCM`,
+        channelId: `flagrant`,
+        title: `Flagrant Explain Why Miami Is Peak Americana`,
+        duration: `8:25`,
+        durationSec: 505,
+        views: `35K`,
+        viewsNum: 35000,
+        age: `2d ago`,
+        format: `clip`,
+        playlist: `CLIPS`,
+        cc: false,
+        note: `Recent highlight clip.`
+      },
+
+      // IMPAULSIVE
+      {
+        id: `xrFdHO7FH8w`,
+        channelId: `impaulsive`,
+        title: `The Donald Trump Interview - IMPAULSIVE EP. 418`,
+        duration: `52:00+`,
+        durationSec: 3120,
+        views: `7.31M`,
+        viewsNum: 7308686,
+        age: `2y ago`,
+        format: `video`,
+        playlist: `Featured Episode`,
+        cc: false,
+        note: `Featured channel video: Donald Trump joins IMPAULSIVE to discuss the 2024 election, raising $140M, Putin, Elon Musk, and aliens.`,
+        chapters: [
+          { time: `0:00`, sec: 0, label: `Welcome Donald Trump!` },
+          { time: `2:35`, sec: 155, label: `Felony Conviction & Raising $140M` },
+          { time: `7:47`, sec: 467, label: `Joe Biden Debate!` },
+          { time: `12:27`, sec: 747, label: `Logan Paul Vs Bradley Martyn` },
+          { time: `19:05`, sec: 1145, label: `Vladimir Putin Friendship & Russia Vs Ukraine War` },
+          { time: `41:11`, sec: 2471, label: `Does Trump Believe in Aliens?` },
+          { time: `44:40`, sec: 2680, label: `Elon Musk & Trump's Relationship` }
+        ]
+      },
+      {
+        id: `GDr7dnWrusI`,
+        channelId: `impaulsive`,
+        title: `Bryce Crawford VS Logan Paul (God Debate)`,
+        duration: `1:36:30`,
+        durationSec: 5790,
+        views: `1.3M`,
+        viewsNum: 1300000,
+        age: `2mo ago`,
+        format: `video`,
+        playlist: `Recent Uploads`,
+        cc: false,
+        note: `Collab with Bryce Crawford Podcast.`
+      },
+      {
+        id: `HBURqwzzPd4`,
+        channelId: `impaulsive`,
+        title: `Ali G Vs Logan Paul (Unfiltered Interview)`,
+        duration: `50:21`,
+        durationSec: 3021,
+        views: `1M`,
+        viewsNum: 1000000,
+        age: `3w ago`,
+        format: `video`,
+        playlist: `Recent Uploads`,
+        cc: false,
+        note: `Unfiltered interview episode.`
+      },
+      {
+        id: `EmEzGv-i-AQ`,
+        channelId: `impaulsive`,
+        title: `Conor Benn on Kicking Ryan Garcia's A**, Anthony Joshua Breaking Jake Paul's Face, Eubank Jr Trilogy`,
+        duration: `1:06:55`,
+        durationSec: 4015,
+        views: `579K`,
+        viewsNum: 579000,
+        age: `2mo ago`,
+        format: `video`,
+        playlist: `SPORTS/ATHLETES`,
+        cc: false,
+        note: `Pro boxer Conor Benn joins the podcast.`
+      },
+      {
+        id: `97EIKJ0L80o`,
+        channelId: `impaulsive`,
+        title: `Steiny Exposes SteveWillDoIt, NELK Boys COLLAPSE, Andrew Schulz Fallout`,
+        duration: `1:02:23`,
+        durationSec: 3743,
+        views: `578K`,
+        viewsNum: 578000,
+        age: `3w ago`,
+        format: `video`,
+        playlist: `Recent Uploads`,
+        cc: false,
+        note: `Collab with One Night with Steiny.`
+      },
+      {
+        id: `5J9HEzKJpxE`,
+        channelId: `impaulsive`,
+        title: `Logan Paul FINALLY Responds to Ethan Klein Scandal, Hasan Piker, Dwarf Mamba Going BROKE`,
+        duration: `1:32:30`,
+        durationSec: 5550,
+        views: `356K`,
+        viewsNum: 356000,
+        age: `2w ago`,
+        format: `video`,
+        playlist: `Recent Uploads`,
+        cc: false,
+        note: `Latest episode in archive excerpt.`
+      },
+
+      // Jake Paul
+      {
+        id: `UxzDHFG1LxI`,
+        channelId: `jakepaul`,
+        title: `My New $40,000,000 Ranch Tour`,
+        duration: `Featured`,
+        durationSec: 900,
+        views: `4.27M`,
+        viewsNum: 4270949,
+        age: `10mo ago`,
+        format: `video`,
+        playlist: `Featured Video`,
+        cc: false,
+        note: `Tour of Paul Reserve ranch.`
+      },
+      {
+        id: `-fLJeEFRa9E`,
+        channelId: `jakepaul`,
+        title: `2 KILLER CLOWNS BROKE INTO THE TEAM 10 MANSION! SECURITY FOOTAGE`,
+        duration: `14:51`,
+        durationSec: 891,
+        views: `14M`,
+        viewsNum: 14000000,
+        age: `8y ago`,
+        format: `video`,
+        playlist: `The Attack of the Killer Clowns`,
+        cc: false,
+        note: `Season 1 opener at the Team 10 Mansion.`
+      },
+      {
+        id: `VeDwL_v2mQQ`,
+        channelId: `jakepaul`,
+        title: `I Spent $1 Million Dollars On This Vacation`,
+        duration: `16:31`,
+        durationSec: 991,
+        views: `10M`,
+        viewsNum: 10000000,
+        age: `7y ago`,
+        format: `video`,
+        playlist: `Archive Highlights`,
+        cc: false,
+        note: `High-budget travel vlog.`
+      },
+      {
+        id: `dazKdq-FecQ`,
+        channelId: `jakepaul`,
+        title: `our first time making out on camera..`,
+        duration: `15:19`,
+        durationSec: 919,
+        views: `10M`,
+        viewsNum: 10000000,
+        age: `7y ago`,
+        format: `video`,
+        playlist: `Archive Highlights`,
+        cc: false,
+        note: `Archive vlog.`
+      },
+      {
+        id: `-51arPXMJj8`,
+        channelId: `jakepaul`,
+        title: `I Snuck Into VidCon Then Surprised Tana With THIS...`,
+        duration: `15:44`,
+        durationSec: 944,
+        views: `6.8M`,
+        viewsNum: 6800000,
+        age: `7y ago`,
+        format: `video`,
+        playlist: `Archive Highlights`,
+        cc: false,
+        note: `VidCon surprise vlog.`
+      },
+      {
+        id: `DYJnyZwJNPk`,
+        channelId: `jakepaul`,
+        title: `I got CAUGHT CHEATING on my wife`,
+        duration: `16:16`,
+        durationSec: 976,
+        views: `4.4M`,
+        viewsNum: 4400000,
+        age: `7y ago`,
+        format: `video`,
+        playlist: `Archive Highlights`,
+        cc: false,
+        note: `Archive vlog.`
+      },
+
+      // JerryRigEverything
+      {
+        id: `aqMZfQODJZo`,
+        channelId: `jerryrig`,
+        title: `How to Install an Elevator in your Living Room!`,
+        duration: `13:20`,
+        durationSec: 800,
+        views: `33M`,
+        viewsNum: 33000000,
+        age: `7y ago`,
+        format: `video`,
+        playlist: `Popular Videos`,
+        cc: true,
+        note: `Top-viewed JerryRigEverything engineering project.`
+      },
+      {
+        id: `Lj4Od9D4puc`,
+        channelId: `jerryrig`,
+        title: `Easiest iPhone Glass Fix – WITH LASERS (Not clickbait)`,
+        duration: `8:51`,
+        durationSec: 531,
+        views: `24M`,
+        viewsNum: 24000000,
+        age: `7y ago`,
+        format: `video`,
+        playlist: `Popular Videos`,
+        cc: true,
+        note: `Laser glass repair demonstration.`
+      },
+      {
+        id: `hUBsxCcJeUc`,
+        channelId: `jerryrig`,
+        title: `iPad Pro Bend Test! - Be gentle with Apples new iPad...`,
+        duration: `7:51`,
+        durationSec: 471,
+        views: `22M`,
+        viewsNum: 22000000,
+        age: `8y ago`,
+        format: `video`,
+        playlist: `Popular Videos`,
+        cc: true,
+        note: `Iconic durability bend test.`
+      },
+      {
+        id: `0vYfAqEyGV0`,
+        channelId: `jerryrig`,
+        title: `iPhone 7 Scratch test - BEND TEST - Durability video!`,
+        duration: `5:45`,
+        durationSec: 345,
+        views: `18M`,
+        viewsNum: 18000000,
+        age: `10y ago`,
+        format: `video`,
+        playlist: `Popular Videos`,
+        cc: true,
+        note: `Classic smartphone durability test.`
+      },
+      {
+        id: `5laDGy4INB0`,
+        channelId: `jerryrig`,
+        title: `iPhone Duo Durability: Destroyed`,
+        duration: `14:49`,
+        durationSec: 889,
+        views: `16M`,
+        viewsNum: 16000000,
+        age: `3w ago`,
+        format: `video`,
+        playlist: `Recent Uploads`,
+        cc: true,
+        note: `Recent durability test.`
+      },
+      {
+        id: `5O-vCJW1b8g`,
+        channelId: `jerryrig`,
+        title: `Trump Phone Durability Test - Its worse than we thought...`,
+        duration: `9:37`,
+        durationSec: 577,
+        views: `15M`,
+        viewsNum: 15000000,
+        age: `2w ago`,
+        format: `video`,
+        playlist: `Recent Uploads`,
+        cc: true,
+        note: `Recent hardware durability inspection.`
+      },
+      {
+        id: `k8W0Eb7sKss`,
+        channelId: `jerryrig`,
+        title: `ONE PHONE TO RULE THEM ALL`,
+        duration: `12:57`,
+        durationSec: 777,
+        views: `12M`,
+        viewsNum: 12000000,
+        age: `10d ago`,
+        format: `video`,
+        playlist: `Recent Uploads`,
+        cc: true,
+        note: `Latest flagship smartphone review.`
+      },
+      {
+        id: `z7bM8-hcgsI`,
+        channelId: `jerryrig`,
+        title: `BACKYARD BUNKER PART 6 - How To Bury a Tube`,
+        duration: `14:19`,
+        durationSec: 859,
+        views: `3.9M`,
+        viewsNum: 3900000,
+        age: `2y ago`,
+        format: `video`,
+        playlist: `The Backyard Bunker Project`,
+        cc: true,
+        note: `DIY underground bunker series.`
+      },
+      {
+        id: `Cvep_Ut7gok`,
+        channelId: `jerryrig`,
+        title: `How to Build a Smartphone - Full Factory Tour`,
+        duration: `16:34`,
+        durationSec: 994,
+        views: `3.3M`,
+        viewsNum: 3300000,
+        age: `3w ago`,
+        format: `video`,
+        playlist: `Collaborations`,
+        cc: true,
+        note: `Full factory tour with OPPO.`
+      },
+      {
+        id: `pM1qgJMBqMw`,
+        channelId: `jerryrig`,
+        title: `The $25,000 dollar truck you can fix yourself - Slate Truck First Drive`,
+        duration: `9:20`,
+        durationSec: 560,
+        views: `914K`,
+        viewsNum: 914000,
+        age: `4mo ago`,
+        format: `video`,
+        playlist: `Electric Vehicle Reviews`,
+        cc: false,
+        note: `EV first drive review.`
+      },
+      {
+        id: `FDNbcfMaF6o`,
+        channelId: `jerryrig`,
+        title: `My favorite Smartphone of 2026 (wait to see the insides)`,
+        duration: `Short`,
+        durationSec: 45,
+        views: `7.6M`,
+        viewsNum: 7600000,
+        age: `Short`,
+        format: `short`,
+        playlist: `Shorts`,
+        cc: false,
+        note: `2026 smartphone teardown Short.`
+      },
+
+      // Kara and Nate
+      {
+        id: `GvvA12oTQ94`,
+        channelId: `karanate`,
+        title: `WE LIVED IN A $650,000 EARTHROAMER (full tour)`,
+        duration: `21:34`,
+        durationSec: 1294,
+        views: `15M`,
+        viewsNum: 15000000,
+        age: `5y ago`,
+        format: `video`,
+        playlist: `Popular Videos`,
+        cc: false,
+        note: `Most-viewed video on Kara and Nate.`
+      },
+      {
+        id: `pps8hh5Aq-c`,
+        channelId: `karanate`,
+        title: `THAILAND CAPSULE HOTEL (sleeping in the Bangkok airport)`,
+        duration: `12:39`,
+        durationSec: 759,
+        views: `11M`,
+        viewsNum: 11000000,
+        age: `6y ago`,
+        format: `video`,
+        playlist: `Popular Videos`,
+        cc: false,
+        note: `Bangkok airport capsule hotel stay.`
+      },
+      {
+        id: `_JA5sQVGal4`,
+        channelId: `karanate`,
+        title: `72 HOUR SURVIVAL (no food, no water, on an island)`,
+        duration: `47:55`,
+        durationSec: 2875,
+        views: `10M`,
+        viewsNum: 10000000,
+        age: `4y ago`,
+        format: `video`,
+        playlist: `Popular Videos`,
+        cc: true,
+        note: `72-hour island survival challenge.`
+      },
+      {
+        id: `wvRnoLIvabY`,
+        channelId: `karanate`,
+        title: `WE SLEPT ON THE SIDE OF A MOUNTAIN | Peru Sky Lodge`,
+        duration: `12:32`,
+        durationSec: 752,
+        views: `10M`,
+        viewsNum: 10000000,
+        age: `9y ago`,
+        format: `video`,
+        playlist: `Popular Videos`,
+        cc: true,
+        note: `Cliffside capsule stay in Peru.`
+      },
+      {
+        id: `6RUfOU_Dqw8`,
+        channelId: `karanate`,
+        title: `DAILY LIFE ONBOARD A CRUISE IN ANTARCTICA (what it's really like)`,
+        duration: `20:18`,
+        durationSec: 1218,
+        views: `8M`,
+        viewsNum: 8000000,
+        age: `6y ago`,
+        format: `video`,
+        playlist: `We Went to ANTARCTICA`,
+        cc: false,
+        note: `7th continent cruise expedition.`
+      },
+      {
+        id: `FuFv4iF8wgg`,
+        channelId: `karanate`,
+        title: `100th COUNTRY DOCUMENTARY`,
+        duration: `Featured`,
+        durationSec: 1800,
+        views: `6.94M`,
+        viewsNum: 6936844,
+        age: `6y ago`,
+        format: `video`,
+        playlist: `Featured Documentary`,
+        cc: false,
+        note: `Featured channel documentary chronicling their journey from Tennessee to 100 countries.`
+      },
+      {
+        id: `PA9fmEe8nJU`,
+        channelId: `karanate`,
+        title: `WE SLEPT OUTSIDE IN ANTARCTICA! (camping in the snow)`,
+        duration: `15:36`,
+        durationSec: 936,
+        views: `3.6M`,
+        viewsNum: 3600000,
+        age: `6y ago`,
+        format: `video`,
+        playlist: `Our Physical Challenges`,
+        cc: true,
+        note: `Snow camping in Antarctica.`
+      },
+      {
+        id: `Nkf0UDOAeug`,
+        channelId: `karanate`,
+        title: `8 Hours in Lufthansa's New Double Suite (Allegris First Class)`,
+        duration: `32:23`,
+        durationSec: 1943,
+        views: `1.7M`,
+        viewsNum: 1700000,
+        age: `1y ago`,
+        format: `video`,
+        playlist: `TRAVEL DAY VLOGS`,
+        cc: true,
+        note: `First-class flight review.`
+      },
+      {
+        id: `l3M5l0_dLFg`,
+        channelId: `karanate`,
+        title: `FIRST VLOG EVER: 20+ Hours to Tokyo`,
+        duration: `6:35`,
+        durationSec: 395,
+        views: `1.6M`,
+        viewsNum: 1600000,
+        age: `10y ago`,
+        format: `video`,
+        playlist: `Watch From The Beginning`,
+        cc: false,
+        note: `January 10, 2016 departure vlog to Tokyo.`
+      },
+      {
+        id: `QuUV67rNDiQ`,
+        channelId: `karanate`,
+        title: `China's most inconvenient convenient store🙈`,
+        duration: `Short`,
+        durationSec: 45,
+        views: `2.8M`,
+        viewsNum: 2800000,
+        age: `Short`,
+        format: `short`,
+        playlist: `Shorts`,
+        cc: false,
+        note: `Cliffside convenience store Short.`
+      },
+
+      // Logan Paul
+      {
+        id: `oeCytho8wq4`,
+        channelId: `loganpaul`,
+        title: `FULL SONG: The Fall Of Jake Paul (Official Video) FEAT. Why Don't We`,
+        duration: `3:32`,
+        durationSec: 212,
+        views: `298M`,
+        viewsNum: 298000000,
+        age: `9y ago`,
+        format: `clip`,
+        playlist: `Music Videos`,
+        cc: true,
+        note: `Highest-viewed video across the entire 10-channel archive.`
+      },
+      {
+        id: `khPLWaBioOs`,
+        channelId: `loganpaul`,
+        title: `Logan Paul - SANTA DISS TRACK (Official Music Video)`,
+        duration: `2:57`,
+        durationSec: 177,
+        views: `91M`,
+        viewsNum: 91000000,
+        age: `8y ago`,
+        format: `clip`,
+        playlist: `Music Videos`,
+        cc: true,
+        note: `Official music video.`
+      },
+      {
+        id: `N4PPGuW7czQ`,
+        channelId: `loganpaul`,
+        title: `I Bought The World's Most Expensive Pokémon Card ($5,300,000)`,
+        duration: `9:10`,
+        durationSec: 550,
+        views: `11M`,
+        viewsNum: 11000000,
+        age: `4y ago`,
+        format: `video`,
+        playlist: `Vlogs!`,
+        cc: false,
+        note: `PSA 10 Pikachu Illustrator purchase.`
+      },
+      {
+        id: `gHJaXRZElXs`,
+        channelId: `loganpaul`,
+        title: `Logan Paul & KSI Go Undercover At Walmart`,
+        duration: `4:18`,
+        durationSec: 258,
+        views: `10M`,
+        viewsNum: 10000000,
+        age: `4y ago`,
+        format: `video`,
+        playlist: `Vlogs!`,
+        cc: false,
+        note: `Prime promotional undercover vlog.`
+      },
+      {
+        id: `XsGOQP-B0gU`,
+        channelId: `loganpaul`,
+        title: `I Took 4,120 Polaroids In 99 Days`,
+        duration: `40:46`,
+        durationSec: 2446,
+        views: `9.6M`,
+        viewsNum: 9600000,
+        age: `4y ago`,
+        format: `video`,
+        playlist: `Vlogs!`,
+        cc: true,
+        note: `99-day Polaroid documentary vlog.`
+      },
+      {
+        id: `hmXTBjM0is4`,
+        channelId: `loganpaul`,
+        title: `I Started A Drink Company With KSI`,
+        duration: `4:47`,
+        durationSec: 287,
+        views: `8.2M`,
+        viewsNum: 8200000,
+        age: `4y ago`,
+        format: `video`,
+        playlist: `Vlogs!`,
+        cc: false,
+        note: `Launch story of Prime Hydration.`
+      },
+      {
+        id: `8A5KDZAzDMs`,
+        channelId: `loganpaul`,
+        title: `I Spent $2,713,096 on The World's First Pokémon Card`,
+        duration: `Featured`,
+        durationSec: 720,
+        views: `2.85M`,
+        viewsNum: 2853622,
+        age: `3mo ago`,
+        format: `video`,
+        playlist: `Featured Video`,
+        cc: false,
+        note: `Featured channel video on Logan Paul's Pokémon collectibles.`
+      },
+      {
+        id: `7qhEZtNvQ3o`,
+        channelId: `loganpaul`,
+        title: `Logan Paul took the BIGGEST risk in Pokémon 😬`,
+        duration: `1:12`,
+        durationSec: 72,
+        views: `12M`,
+        viewsNum: 12000000,
+        age: `4mo ago`,
+        format: `clip`,
+        playlist: `Collaborations`,
+        cc: false,
+        note: `Ripit and Logan Paul collaboration.`
+      },
+      {
+        id: `ZXLBMungT4s`,
+        channelId: `loganpaul`,
+        title: `I DO THIS EVERY DAY 😏`,
+        duration: `Short`,
+        durationSec: 45,
+        views: `2.5M`,
+        viewsNum: 2500000,
+        age: `Short`,
+        format: `short`,
+        playlist: `Shorts`,
+        cc: false,
+        note: `Logan Paul YouTube Short.`
+      },
+
+      // Mike Majlak Vlogs
+      {
+        id: `5qEwbzSq418`,
+        channelId: `mikemajlak`,
+        title: `I Opened A $2,000,000 Burger Shop In Hollywood | The Night Shift`,
+        duration: `21:58`,
+        durationSec: 1318,
+        views: `1.3M`,
+        viewsNum: 1300000,
+        age: `1mo ago`,
+        format: `video`,
+        playlist: `The Night Shift`,
+        cc: false,
+        note: `Hollywood burger shop launch.`
+      },
+      {
+        id: `Un8xWMZJWj0`,
+        channelId: `mikemajlak`,
+        title: `We Rented A $27,000,000 Desert Airbnb | The Night Shift`,
+        duration: `24:27`,
+        durationSec: 1467,
+        views: `426K`,
+        viewsNum: 426000,
+        age: `2w ago`,
+        format: `video`,
+        playlist: `The Night Shift`,
+        cc: false,
+        note: `Recent Night Shift vlog.`
+      },
+      {
+        id: `dSbDo8QQUBo`,
+        channelId: `mikemajlak`,
+        title: `I Have 22 Screws In My Ankle…`,
+        duration: `Short`,
+        durationSec: 45,
+        views: `95K`,
+        viewsNum: 95000,
+        age: `Short`,
+        format: `short`,
+        playlist: `Shorts`,
+        cc: false,
+        note: `Mike Majlak YouTube Short.`
+      },
+
+      // Philip DeFranco
+      {
+        id: `B4f6HuXTP8s`,
+        channelId: `defranco`,
+        title: `Joe Rogan Just Exposed Trump's Inner Circle`,
+        duration: `28:05`,
+        durationSec: 1685,
+        views: `1.5M`,
+        viewsNum: 1500000,
+        age: `7d ago`,
+        format: `video`,
+        playlist: `The Philip DeFranco Show`,
+        cc: true,
+        note: `Daily news roundup.`
+      },
+      {
+        id: `vDxM1ElUFGQ`,
+        channelId: `defranco`,
+        title: `The Jensen Huang Nvidia Meltdown is Worse Than You Think`,
+        duration: `33:04`,
+        durationSec: 1984,
+        views: `1.2M`,
+        viewsNum: 1200000,
+        age: `5d ago`,
+        format: `video`,
+        playlist: `The Philip DeFranco Show`,
+        cc: true,
+        note: `Tech & market news analysis.`
+      },
+      {
+        id: `bJhYc_x8Zp4`,
+        channelId: `defranco`,
+        title: `The Ole Miss Doorbell Camera Scandal That Split America`,
+        duration: `31:01`,
+        durationSec: 1861,
+        views: `1.2M`,
+        viewsNum: 1200000,
+        age: `6d ago`,
+        format: `video`,
+        playlist: `The Philip DeFranco Show`,
+        cc: true,
+        note: `Daily PDS episode.`
+      },
+      {
+        id: `HI2iWU6ErTg`,
+        channelId: `defranco`,
+        title: `Dave Chappelle CANCELLED By Republicans & Nvidia CEO Jensen Huang's Crazy Affair with a Chinese Spy`,
+        duration: `32:48`,
+        durationSec: 1968,
+        views: `1.2M`,
+        viewsNum: 1200000,
+        age: `8d ago`,
+        format: `video`,
+        playlist: `The Philip DeFranco Show`,
+        cc: true,
+        note: `Daily PDS episode.`
+      },
+      {
+        id: `7mGkC9tIlO4`,
+        channelId: `defranco`,
+        title: `Jensen Huang's Comeback Sparks Trump Civil War As Nvidia Stock Plummets`,
+        duration: `30:06`,
+        durationSec: 1806,
+        views: `990K`,
+        viewsNum: 990000,
+        age: `1d ago`,
+        format: `video`,
+        playlist: `The Philip DeFranco Show`,
+        cc: true,
+        note: `Daily PDS episode.`
+      },
+      {
+        id: `Ig7Sci-z2qo`,
+        channelId: `defranco`,
+        title: `The Candace Owens Podcast Situation Exposes A Lot, Leaving America, & The Problem With Public School`,
+        duration: `17:16`,
+        durationSec: 1036,
+        views: `594K`,
+        viewsNum: 594000,
+        age: `9mo ago`,
+        format: `video`,
+        playlist: `From The Bastards`,
+        cc: true,
+        note: `Weekly community Q&A show.`
+      },
+      {
+        id: `ScY4WOpsRr4`,
+        channelId: `defranco`,
+        title: `The Stranger Things Netflix Problem is Killing TV`,
+        duration: `16:03`,
+        durationSec: 963,
+        views: `484K`,
+        viewsNum: 484000,
+        age: `1y ago`,
+        format: `video`,
+        playlist: `From The Bastards`,
+        cc: true,
+        note: `Media industry commentary.`
+      },
+      {
+        id: `iW_gxLOazcQ`,
+        channelId: `defranco`,
+        title: `Elon Musk Is Getting Worse`,
+        duration: `1:31:33`,
+        durationSec: 5493,
+        views: `242K`,
+        viewsNum: 242000,
+        age: `3w ago`,
+        format: `video`,
+        playlist: `Crashing Out`,
+        cc: false,
+        note: `Crashing Out with Philip DeFranco & Alex Pearlman.`
+      },
+      {
+        id: `MSgYYhRUgXw`,
+        channelId: `defranco`,
+        title: `The H3 Situation Just Got Worse`,
+        duration: `31:34`,
+        durationSec: 1894,
+        views: `144K`,
+        viewsNum: 144000,
+        age: `1h ago`,
+        format: `video`,
+        playlist: `The Philip DeFranco Show`,
+        cc: true,
+        note: `Most recent upload in archive excerpt.`
+      },
+      {
+        id: `aEeVqbGHTFo`,
+        channelId: `defranco`,
+        title: `The Truth About AIPAC Funding No One Is Talking About`,
+        duration: `1:14:32`,
+        durationSec: 4472,
+        views: `78K`,
+        viewsNum: 78000,
+        age: `7mo ago`,
+        format: `video`,
+        playlist: `In Good Faith`,
+        cc: false,
+        note: `In Good Faith long-form interview.`
+      }
+    ];
+
+    const state = {
+      activeVideoId: `jG7dSXcfVqE`,
+      activeStartSec: 0,
+      selectedChannel: `all`,
+      searchQuery: ``,
+      formatFilter: `all`,
+      playlistFilter: `all`,
+      sortOrder: `views-desc`,
+      sideTab: `queue`,
+      queueIds: [],
+      watchedIds: []
+    };
+
+    const channelMap = Object.fromEntries(CHANNELS.map(c => [c.id, c]));
+    const videoMap = Object.fromEntries(VIDEOS.map(v => [v.id, v]));
+    let channelChartInstance = null;
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, `&amp;`)
+        .replace(/</g, `&lt;`)
+        .replace(/>/g, `&gt;`)
+        .replace(/"/g, `&quot;`)
+        .replace(/'/g, `&#39;`);
+    }
+
+    function formatLabel(format) {
+      if (format === `short`) return `Short`;
+      if (format === `clip`) return `Clip / Music`;
+      return `Full Video`;
+    }
+
+    async function savePersistedState() {
+      if (window.notebookAppApi && typeof window.notebookAppApi.setState === `function`) {
+        try {
+          await window.notebookAppApi.setState({
+            activeVideoId: state.activeVideoId,
+            queueIds: state.queueIds,
+            watchedIds: state.watchedIds,
+            selectedChannel: state.selectedChannel
+          });
+        } catch (err) {
+          // Persistence best-effort
+        }
+      }
+    }
+
+    async function loadPersistedState() {
+      if (window.notebookAppApi && typeof window.notebookAppApi.getState === `function`) {
+        try {
+          const saved = await window.notebookAppApi.getState();
+          if (saved && typeof saved === `object`) {
+            if (saved.activeVideoId && videoMap[saved.activeVideoId]) {
+              state.activeVideoId = saved.activeVideoId;
+            }
+            if (Array.isArray(saved.queueIds)) {
+              state.queueIds = saved.queueIds.filter(id => Boolean(videoMap[id]));
+            }
+            if (Array.isArray(saved.watchedIds)) {
+              state.watchedIds = saved.watchedIds.filter(id => Boolean(videoMap[id]));
+            }
+            if (saved.selectedChannel && (saved.selectedChannel === `all` || channelMap[saved.selectedChannel])) {
+              state.selectedChannel = saved.selectedChannel;
+            }
+          }
+        } catch (err) {
+          // Fall back to initial state
+        }
+      }
+    }
+
+    function getFilteredVideos() {
+      const q = state.searchQuery.trim().toLowerCase();
+      const filtered = VIDEOS.filter(v => {
+        if (state.selectedChannel !== `all` && v.channelId !== state.selectedChannel) return false;
+        if (state.formatFilter !== `all` && v.format !== state.formatFilter) return false;
+        if (state.playlistFilter !== `all` && v.playlist !== state.playlistFilter) return false;
+        if (q) {
+          const ch = channelMap[v.channelId];
+          const haystack = `${v.title} ${ch.name} ${ch.handle} ${v.playlist} ${v.note}`.toLowerCase();
+          if (!haystack.includes(q)) return false;
+        }
+        return true;
+      });
+
+      const sorted = [...filtered];
+      if (state.sortOrder === `views-desc`) {
+        sorted.sort((a, b) => b.viewsNum - a.viewsNum);
+      } else if (state.sortOrder === `duration-desc`) {
+        sorted.sort((a, b) => b.durationSec - a.durationSec);
+      } else if (state.sortOrder === `duration-asc`) {
+        sorted.sort((a, b) => a.durationSec - b.durationSec);
+      }
+      return sorted;
+    }
+
+    function updatePlaylistOptions() {
+      const selectEl = document.getElementById(`playlist-select`);
+      if (!selectEl) return;
+      const pool = state.selectedChannel === `all`
+        ? VIDEOS
+        : VIDEOS.filter(v => v.channelId === state.selectedChannel);
+      const playlists = [...new Set(pool.map(v => v.playlist))].sort();
+      const prev = state.playlistFilter;
+      let html = `<option value="all">All Playlists</option>`;
+      for (const pl of playlists) {
+        html += `<option value="${escapeHtml(pl)}">${escapeHtml(pl)}</option>`;
+      }
+      selectEl.innerHTML = html;
+      if (playlists.includes(prev)) {
+        selectEl.value = prev;
+      } else {
+        state.playlistFilter = `all`;
+        selectEl.value = `all`;
+      }
+    }
+
+    function renderKpis(filteredCount) {
+      const kpiFiltered = document.getElementById(`kpi-filtered`);
+      const kpiFilterNote = document.getElementById(`kpi-filter-note`);
+      const kpiQueue = document.getElementById(`kpi-queue`);
+      const kpiWatchedNote = document.getElementById(`kpi-watched-note`);
+      const kpiTotal = document.getElementById(`kpi-total-videos`);
+
+      if (kpiTotal) kpiTotal.textContent = String(VIDEOS.length);
+      if (kpiFiltered) kpiFiltered.textContent = String(filteredCount);
+      if (kpiFilterNote) {
+        const chLabel = state.selectedChannel === `all` ? `All channels` : channelMap[state.selectedChannel].name;
+        const fmtLabel = state.formatFilter === `all` ? `all formats` : formatLabel(state.formatFilter);
+        kpiFilterNote.textContent = `${chLabel} · ${fmtLabel}`;
+      }
+      if (kpiQueue) kpiQueue.textContent = String(state.queueIds.length);
+      if (kpiWatchedNote) kpiWatchedNote.textContent = `${state.watchedIds.length} marked watched`;
+    }
+
+    function renderPlayer(autoplay = false) {
+      const video = videoMap[state.activeVideoId] || VIDEOS[0];
+      const ch = channelMap[video.channelId];
+      const iframeEl = document.getElementById(`yt-player`);
+      const titleEl = document.getElementById(`now-playing-title`);
+      const subEl = document.getElementById(`now-playing-sub`);
+      const badgesEl = document.getElementById(`now-playing-badges`);
+      const activeIdEl = document.getElementById(`active-video-id`);
+      const chaptersWell = document.getElementById(`chapters-well`);
+      const chaptersList = document.getElementById(`chapters-list`);
+      const activeChapterLabel = document.getElementById(`active-chapter-label`);
+
+      if (iframeEl) {
+        const params = new URLSearchParams({ rel: `0` });
+        if (state.activeStartSec > 0) params.set(`start`, String(state.activeStartSec));
+        if (autoplay) params.set(`autoplay`, `1`);
+        iframeEl.src = `https://www.youtube.com/embed/${encodeURIComponent(video.id)}?${params.toString()}`;
+        iframeEl.title = `${video.title} — ${ch.name}`;
+      }
+
+      if (titleEl) titleEl.textContent = video.title;
+      if (subEl) subEl.textContent = `${ch.name} (${ch.handle}) · ${video.note}`;
+      if (activeIdEl) activeIdEl.textContent = video.id;
+
+      if (badgesEl) {
+        let badgesHtml = `
+          <span class="mono-tag amber">${escapeHtml(ch.name)}</span>
+          <span class="mono-tag">${escapeHtml(video.views)} views</span>
+          <span class="mono-tag">${escapeHtml(video.duration)}</span>
+          <span class="mono-tag">${escapeHtml(video.age)}</span>
+          <span class="mono-tag">${escapeHtml(video.playlist)}</span>
+        `;
+        if (video.cc) {
+          badgesHtml += `<span class="mono-tag sage">CC</span>`;
+        }
+        badgesEl.innerHTML = badgesHtml;
+      }
+
+      if (chaptersWell && chaptersList && activeChapterLabel) {
+        if (Array.isArray(video.chapters) && video.chapters.length > 0) {
+          chaptersWell.hidden = false;
+          const activeChap = video.chapters.find(c => c.sec === state.activeStartSec) || video.chapters[0];
+          activeChapterLabel.textContent = activeChap.time;
+          chaptersList.innerHTML = video.chapters.map(c => {
+            const isActive = c.sec === state.activeStartSec;
+            return `
+              <button type="button" class="chapter-chip ${isActive ? `active` : ``}" onclick="jumpToChapter(${c.sec})">
+                <span class="chapter-time">${escapeHtml(c.time)}</span>
+                <span>${escapeHtml(c.label)}</span>
+              </button>
+            `;
+          }).join(``);
+        } else {
+          chaptersWell.hidden = true;
+          chaptersList.innerHTML = ``;
+        }
+      }
+
+      const btnQueue = document.getElementById(`btn-player-queue`);
+      const btnWatched = document.getElementById(`btn-player-watched`);
+      const inQueue = state.queueIds.includes(video.id);
+      const isWatched = state.watchedIds.includes(video.id);
+
+      if (btnQueue) {
+        btnQueue.className = inQueue ? `btn btn-active-state` : `btn`;
+        btnQueue.innerHTML = inQueue
+          ? `<i data-lucide="list-check" aria-hidden="true"></i><span>In Queue</span>`
+          : `<i data-lucide="list-plus" aria-hidden="true"></i><span>Add to Queue</span>`;
+      }
+      if (btnWatched) {
+        btnWatched.className = isWatched ? `btn btn-watched-state` : `btn`;
+        btnWatched.innerHTML = isWatched
+          ? `<i data-lucide="check-circle-2" aria-hidden="true"></i><span>Watched</span>`
+          : `<i data-lucide="circle" aria-hidden="true"></i><span>Mark Watched</span>`;
+      }
+
+      const prevBtn = document.getElementById(`btn-prev-queue`);
+      const nextBtn = document.getElementById(`btn-next-queue`);
+      const hasQueue = state.queueIds.length > 0;
+      if (prevBtn) prevBtn.disabled = !hasQueue;
+      if (nextBtn) nextBtn.disabled = !hasQueue;
+    }
+
+    function renderSidePanel() {
+      const container = document.getElementById(`side-list-container`);
+      const tabQueueCount = document.getElementById(`tab-queue-count`);
+      const tabWatchedCount = document.getElementById(`tab-watched-count`);
+      const tabQueue = document.getElementById(`tab-queue`);
+      const tabWatched = document.getElementById(`tab-watched`);
+
+      if (tabQueueCount) tabQueueCount.textContent = String(state.queueIds.length);
+      if (tabWatchedCount) tabWatchedCount.textContent = String(state.watchedIds.length);
+      if (tabQueue) tabQueue.setAttribute(`aria-selected`, state.sideTab === `queue` ? `true` : `false`);
+      if (tabWatched) tabWatched.setAttribute(`aria-selected`, state.sideTab === `watched` ? `true` : `false`);
+
+      if (!container) return;
+
+      const listIds = state.sideTab === `queue` ? state.queueIds : state.watchedIds;
+      if (listIds.length === 0) {
+        if (state.sideTab === `queue`) {
+          container.innerHTML = `
+            <div class="empty-state">
+              <p class="empty-state-title">Screening queue is empty</p>
+              <p class="empty-state-copy">Use “+ Queue” on any catalog card or “Queue Top 5” above to line up videos for continuous watching.</p>
+              <button type="button" class="btn btn-primary" onclick="queueTopFiltered()">Queue Top 5 Matches</button>
+            </div>
+          `;
+        } else {
+          container.innerHTML = `
+            <div class="empty-state">
+              <p class="empty-state-title">No watched videos logged yet</p>
+              <p class="empty-state-copy">Mark videos as watched while screening to keep track of what you have already seen.</p>
+            </div>
+          `;
+        }
+        return;
+      }
+
+      container.innerHTML = `<div class="queue-list">${listIds.map(id => {
+        const v = videoMap[id];
+        if (!v) return ``;
+        const ch = channelMap[v.channelId];
+        const isPlaying = v.id === state.activeVideoId;
+        const removeFn = state.sideTab === `queue` ? `toggleQueue` : `toggleWatched`;
+        return `
+          <div class="queue-item ${isPlaying ? `is-playing` : ``}">
+            <button type="button" class="queue-play-btn" aria-label="Play ${escapeHtml(v.title)}" onclick="selectVideo('${v.id}', true)">
+              <i data-lucide="play" aria-hidden="true"></i>
+            </button>
+            <div class="queue-item-info">
+              <button type="button" class="queue-item-title" onclick="selectVideo('${v.id}', true)">${escapeHtml(v.title)}</button>
+              <span class="queue-item-meta">${escapeHtml(ch.name)} · ${escapeHtml(v.duration)} · ${escapeHtml(v.views)}</span>
+            </div>
+            <button type="button" class="queue-remove-btn" aria-label="Remove ${escapeHtml(v.title)}" onclick="${removeFn}('${v.id}')">
+              <i data-lucide="x" aria-hidden="true"></i>
+            </button>
+          </div>
+        `;
+      }).join(``)}</div>`;
+    }
+
+    function renderChannelDirectory() {
+      const grid = document.getElementById(`channel-grid`);
+      const summaryLabel = document.getElementById(`channel-summary-label`);
+      if (!grid) return;
+
+      const allPressed = state.selectedChannel === `all`;
+      let html = `
+        <button type="button" class="channel-pill" aria-pressed="${allPressed ? `true` : `false`}" onclick="selectChannel('all')">
+          <span class="channel-pill-top">
+            <span class="channel-pill-name">All Channels</span>
+            <span class="channel-pill-count">${VIDEOS.length}</span>
+          </span>
+          <span class="channel-pill-sub">10 creator archives</span>
+        </button>
+      `;
+
+      for (const ch of CHANNELS) {
+        const count = VIDEOS.filter(v => v.channelId === ch.id).length;
+        const pressed = state.selectedChannel === ch.id;
+        html += `
+          <button type="button" class="channel-pill" aria-pressed="${pressed ? `true` : `false`}" onclick="selectChannel('${ch.id}')">
+            <span class="channel-pill-top">
+              <span class="channel-pill-name">${escapeHtml(ch.name)}</span>
+              <span class="channel-pill-count">${count}</span>
+            </span>
+            <span class="channel-pill-sub">${escapeHtml(ch.handle)} · ${escapeHtml(ch.subs)} subs</span>
+          </button>
+        `;
+      }
+      grid.innerHTML = html;
+
+      if (summaryLabel) {
+        if (state.selectedChannel === `all`) {
+          summaryLabel.textContent = `Showing all 10 channels`;
+        } else {
+          const ch = channelMap[state.selectedChannel];
+          summaryLabel.textContent = `${ch.name} (${ch.handle}) · ${ch.tagline}`;
+        }
+      }
+    }
+
+    function renderCatalog() {
+      const grid = document.getElementById(`catalog-grid`);
+      const countLabel = document.getElementById(`catalog-count-label`);
+      const heading = document.getElementById(`catalog-heading`);
+      if (!grid) return;
+
+      const items = getFilteredVideos();
+      renderKpis(items.length);
+
+      if (heading) {
+        heading.textContent = state.selectedChannel === `all`
+          ? `Video Catalog`
+          : `${channelMap[state.selectedChannel].name} Archive`;
+      }
+      if (countLabel) {
+        countLabel.textContent = `${items.length} ${items.length === 1 ? `video` : `videos`} shown`;
+      }
+
+      if (items.length === 0) {
+        grid.innerHTML = `
+          <div class="empty-state">
+            <p class="empty-state-title">No videos match the current filters</p>
+            <p class="empty-state-copy">Try clearing your search query or switching back to all formats and playlists.</p>
+            <button type="button" class="btn btn-primary" onclick="resetAllFilters()">Reset All Filters</button>
+          </div>
+        `;
+        return;
+      }
+
+      grid.innerHTML = items.map(v => {
+        const ch = channelMap[v.channelId];
+        const isPlaying = v.id === state.activeVideoId;
+        const inQueue = state.queueIds.includes(v.id);
+        const isWatched = state.watchedIds.includes(v.id);
+        const toneClass = ch.accent === `amber` ? `tone-amber` : (ch.accent === `sage` ? `tone-sage` : (ch.accent === `coral` ? `tone-coral` : ``));
+
+        return `
+          <article class="video-card-wrapper">
+            <div class="video-card ${isPlaying ? `is-playing` : ``}">
+              <button type="button" class="poster-btn" aria-label="Watch ${escapeHtml(v.title)}" onclick="selectVideo('${v.id}', true)">
+                <div class="poster-art">
+                  <div class="poster-accent-line ${toneClass}"></div>
+                  <div class="poster-top">
+                    <span class="poster-channel-code">${escapeHtml(ch.handle)}</span>
+                    <span class="poster-badges">
+                      <span class="poster-duration">${escapeHtml(formatLabel(v.format))}</span>
+                      ${v.cc ? `<span class="poster-duration">CC</span>` : ``}
+                    </span>
+                  </div>
+                  <div class="poster-center">
+                    <span class="poster-play-disc" aria-hidden="true">
+                      <i data-lucide="play" aria-hidden="true"></i>
+                    </span>
+                    <span class="poster-series">${escapeHtml(v.playlist)}</span>
+                  </div>
+                  <div class="poster-bottom">
+                    <span class="poster-views">${escapeHtml(v.views)} views</span>
+                    <span class="poster-duration">${escapeHtml(v.duration)}</span>
+                  </div>
+                </div>
+              </button>
+              <div class="card-body">
+                <div class="card-meta-line">
+                  <span>${escapeHtml(ch.name)}</span>
+                  <span>${escapeHtml(v.age)}</span>
+                </div>
+                <button type="button" class="card-title-btn" onclick="selectVideo('${v.id}', true)">
+                  ${escapeHtml(v.title)}
+                </button>
+                <div class="card-actions">
+                  <button type="button" class="btn ${isPlaying ? `btn-primary` : ``}" onclick="selectVideo('${v.id}', true)">
+                    <i data-lucide="play-circle" aria-hidden="true"></i>
+                    <span>${isPlaying ? `Screening` : `Watch`}</span>
+                  </button>
+                  <button type="button" class="btn ${inQueue ? `btn-active-state` : ``}" onclick="toggleQueue('${v.id}')">
+                    <i data-lucide="${inQueue ? `list-check` : `list-plus`}" aria-hidden="true"></i>
+                    <span>${inQueue ? `Queued` : `Queue`}</span>
+                  </button>
+                  <button type="button" class="btn ${isWatched ? `btn-watched-state` : ``}" aria-label="Mark ${escapeHtml(v.title)} watched" onclick="toggleWatched('${v.id}')">
+                    <i data-lucide="${isWatched ? `check` : `circle`}" aria-hidden="true"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </article>
+        `;
+      }).join(``);
+    }
+
+    function renderChannelTableAndChart() {
+      const tbody = document.getElementById(`channel-table-body`);
+      if (tbody) {
+        tbody.innerHTML = CHANNELS.map(ch => {
+          const indexedCount = VIDEOS.filter(v => v.channelId === ch.id).length;
+          return `
+            <tr class="clickable-row" onclick="selectChannel('${ch.id}')">
+              <td><strong>${escapeHtml(ch.name)}</strong></td>
+              <td class="num">${escapeHtml(ch.subs)}</td>
+              <td class="num">${escapeHtml(ch.totalVideos)}</td>
+              <td class="num">${indexedCount}</td>
+            </tr>
+          `;
+        }).join(``);
+      }
+
+      const canvas = document.getElementById(`channel-chart`);
+      if (!canvas || typeof Chart === `undefined`) return;
+
+      const styles = getComputedStyle(document.documentElement);
+      const textMuted = styles.getPropertyValue(`--on-surface-variant`).trim() || `#9e9b93`;
+      const gridColor = styles.getPropertyValue(`--outline-variant`).trim() || `#25252e`;
+      const data1 = styles.getPropertyValue(`--data-1`).trim() || `#e5a93c`;
+      const data2 = styles.getPropertyValue(`--data-2`).trim() || `#7c9cb0`;
+      const bgSurface = styles.getPropertyValue(`--surface-container-low`).trim() || `#121216`;
+      const textMain = styles.getPropertyValue(`--on-surface`).trim() || `#f0ede6`;
+
+      const labels = CHANNELS.map(c => c.name);
+      const subValues = CHANNELS.map(c => c.subsNum);
+      const topViewsValues = CHANNELS.map(c => {
+        const chVideos = VIDEOS.filter(v => v.channelId === c.id);
+        const maxV = chVideos.reduce((m, v) => Math.max(m, v.viewsNum), 0);
+        return Number((maxV / 1000000).toFixed(2));
+      });
+
+      if (channelChartInstance) {
+        channelChartInstance.destroy();
+      }
+
+      channelChartInstance = new Chart(canvas, {
+        type: `bar`,
+        data: {
+          labels,
+          datasets: [
+            {
+              label: `Subscribers (M)`,
+              data: subValues,
+              backgroundColor: data1,
+              borderRadius: 3
+            },
+            {
+              label: `Top Indexed Video Views (M)`,
+              data: topViewsValues,
+              backgroundColor: data2,
+              borderRadius: 3
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              labels: {
+                color: textMuted,
+                font: { family: `JetBrains Mono, monospace`, size: 11 }
+              }
+            },
+            tooltip: {
+              backgroundColor: bgSurface,
+              titleColor: textMain,
+              bodyColor: textMain,
+              borderColor: gridColor,
+              borderWidth: 1
+            }
+          },
+          scales: {
+            x: {
+              ticks: { color: textMuted, font: { family: `JetBrains Mono, monospace`, size: 10 } },
+              grid: { display: false }
+            },
+            y: {
+              ticks: {
+                color: textMuted,
+                font: { family: `JetBrains Mono, monospace`, size: 11 },
+                callback: function(val) { return val + `M`; }
+              },
+              grid: { color: gridColor }
+            }
+          }
+        }
+      });
+    }
+
+    function refreshIcons() {
+      if (window.lucide && typeof window.lucide.createIcons === `function`) {
+        window.lucide.createIcons();
+      }
+    }
+
+    function selectVideo(videoId, scrollToPlayer = false) {
+      if (!videoMap[videoId]) return;
+      state.activeVideoId = videoId;
+      state.activeStartSec = 0;
+      renderPlayer(true);
+      renderSidePanel();
+      renderCatalog();
+      refreshIcons();
+      savePersistedState();
+      if (scrollToPlayer) {
+        const room = document.getElementById(`screening-room`);
+        if (room && typeof room.scrollIntoView === `function`) {
+          room.scrollIntoView({ behavior: `smooth`, block: `start` });
+        }
+      }
+    }
+
+    function jumpToChapter(seconds) {
+      state.activeStartSec = Number(seconds) || 0;
+      renderPlayer(true);
+      refreshIcons();
+    }
+
+    function toggleQueue(videoId) {
+      if (!videoMap[videoId]) return;
+      const idx = state.queueIds.indexOf(videoId);
+      if (idx === -1) {
+        state.queueIds.push(videoId);
+      } else {
+        state.queueIds.splice(idx, 1);
+      }
+      renderPlayer(false);
+      renderSidePanel();
+      renderCatalog();
+      refreshIcons();
+      savePersistedState();
+    }
+
+    function toggleWatched(videoId) {
+      if (!videoMap[videoId]) return;
+      const idx = state.watchedIds.indexOf(videoId);
+      if (idx === -1) {
+        state.watchedIds.push(videoId);
+      } else {
+        state.watchedIds.splice(idx, 1);
+      }
+      renderPlayer(false);
+      renderSidePanel();
+      renderCatalog();
+      refreshIcons();
+      savePersistedState();
+    }
+
+    function toggleQueueActive() {
+      toggleQueue(state.activeVideoId);
+    }
+
+    function toggleWatchedActive() {
+      toggleWatched(state.activeVideoId);
+    }
+
+    function playRelativeInQueue(delta) {
+      if (state.queueIds.length === 0) return;
+      const currentIdx = state.queueIds.indexOf(state.activeVideoId);
+      let nextIdx = 0;
+      if (currentIdx !== -1) {
+        nextIdx = (currentIdx + delta + state.queueIds.length) % state.queueIds.length;
+      } else if (delta < 0) {
+        nextIdx = state.queueIds.length - 1;
+      }
+      selectVideo(state.queueIds[nextIdx], false);
+    }
+
+    function queueTopFiltered() {
+      const topFive = getFilteredVideos().slice(0, 5);
+      for (const v of topFive) {
+        if (!state.queueIds.includes(v.id)) {
+          state.queueIds.push(v.id);
+        }
+      }
+      state.sideTab = `queue`;
+      renderPlayer(false);
+      renderSidePanel();
+      renderCatalog();
+      refreshIcons();
+      savePersistedState();
+    }
+
+    function setSideTab(tabName) {
+      state.sideTab = tabName === `watched` ? `watched` : `queue`;
+      renderSidePanel();
+      refreshIcons();
+    }
+
+    function selectChannel(channelId) {
+      state.selectedChannel = channelId;
+      state.playlistFilter = `all`;
+      updatePlaylistOptions();
+      renderChannelDirectory();
+      renderCatalog();
+      refreshIcons();
+      savePersistedState();
+    }
+
+    function handleFilterChange() {
+      const searchEl = document.getElementById(`search-input`);
+      const formatEl = document.getElementById(`format-select`);
+      const playlistEl = document.getElementById(`playlist-select`);
+      const sortEl = document.getElementById(`sort-select`);
+
+      if (searchEl) state.searchQuery = searchEl.value;
+      if (formatEl) state.formatFilter = formatEl.value;
+      if (playlistEl) state.playlistFilter = playlistEl.value;
+      if (sortEl) state.sortOrder = sortEl.value;
+
+      renderCatalog();
+      refreshIcons();
+    }
+
+    function resetAllFilters() {
+      state.selectedChannel = `all`;
+      state.searchQuery = ``;
+      state.formatFilter = `all`;
+      state.playlistFilter = `all`;
+      state.sortOrder = `views-desc`;
+
+      const searchEl = document.getElementById(`search-input`);
+      const formatEl = document.getElementById(`format-select`);
+      const sortEl = document.getElementById(`sort-select`);
+      if (searchEl) searchEl.value = ``;
+      if (formatEl) formatEl.value = `all`;
+      if (sortEl) sortEl.value = `views-desc`;
+
+      updatePlaylistOptions();
+      renderChannelDirectory();
+      renderCatalog();
+      refreshIcons();
+      savePersistedState();
+    }
+
+    document.addEventListener(`DOMContentLoaded`, async function() {
+      await loadPersistedState();
+      updatePlaylistOptions();
+      renderChannelDirectory();
+      renderPlayer(false);
+      renderSidePanel();
+      renderCatalog();
+      renderChannelTableAndChart();
+      refreshIcons();
+    });
+  </script>
+</body>
+</html>
